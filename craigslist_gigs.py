@@ -85,5 +85,5 @@ def fetch_links_postings(place,subcat='cpg'):
     links = get_links(place,subcat)
     for (link,title) in links:
         posting = get_posting(link)
-
+        #TODO store
 
