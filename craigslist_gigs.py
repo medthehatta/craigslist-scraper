@@ -64,7 +64,11 @@ def get_posting_info(soup,url):
 
     posting_text = soup.find(attrs={'id':'postingbody'}).text.strip()
     posting_title = soup.find(attrs={'class':'postingtitle'}).text.strip()
-    posting_email = soup.find(attrs={'href':re.compile(r'mailto.*')}).text.strip()
+    posting_email = soup.find(attrs={'href':re.compile(r'mailto.*')})
+    if posting_email is not None:
+        posting_email = posting_email.text.strip()
+    else:
+        posting_email = "nobody"
 
     return {'email':posting_email, 'date':posting_date, 'time':posting_time, 'text':posting_text, 'title':posting_title, 'url':url}
 
@@ -77,13 +81,21 @@ def print_posting(post):
     return template.format(**post)
 
 
-def fetch_links_postings(place,subcat='cpg'):
+def fetch_links_postings(place,subcat='cpg',db=None):
     """
     Given a place, fetches all the postings from the place page and gets their
     info.
     """
+    DB = "entries.db"
+    if db is None:
+       db = sqlite3.connect(DB) 
+    c = db.cursor()
+
     links = get_links(place,subcat)
     for (link,title) in links:
         posting = get_posting(link)
-        #TODO store
+        posting_tuple= [posting[key] for key in
+                                     ['title','date','time','url','email','text']]
+        c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",posting_tuple)
+    db.commit()
 
