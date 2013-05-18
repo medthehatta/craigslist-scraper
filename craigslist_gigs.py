@@ -3,6 +3,7 @@ import urllib
 import random
 import datetime
 import sqlite3
+import time
 from bs4 import BeautifulSoup
 
 
@@ -70,14 +71,17 @@ def get_posting_info(soup,url):
     else:
         posting_email = "nobody"
 
-    return {'email':posting_email, 'date':posting_date, 'time':posting_time, 'text':posting_text, 'title':posting_title, 'url':url}
+    return {'email':posting_email, 'date':posting_date, 'time':posting_time, 
+            'text':posting_text, 'title':posting_title, 'url':url}
 
 
 def print_posting(post):
     """
-    Convenience function for printing a posting retrieved with get_posting_info.
+    Convenience function for printing a posting retrieved with
+    get_posting_info.
     """
-    template = "\n".join(["{title}","{date} ({time})","{url}","{email}","","{text}"])
+    template = "\n".join(["{title}","{date} ({time})",
+                          "{url}","{email}","","{text}"])
     return template.format(**post)
 
 
@@ -95,7 +99,9 @@ def fetch_links_postings(place,subcat='cpg',db=None):
     for (link,title) in links:
         posting = get_posting(link)
         posting_tuple= [posting[key] for key in
-                                     ['title','date','time','url','email','text']]
-        c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",posting_tuple)
+                        ['title','date','time','url','email','text']]
+        c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
+                  posting_tuple)
+        time.sleep(3)  # sleep 3 seconds to give the web server a break
     db.commit()
 
