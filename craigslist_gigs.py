@@ -61,17 +61,24 @@ def get_posting_info(soup,url):
     Given soup for a posting page, extracts the important properties from the
     page and returns a dict.
     """
-    date = soup.find('date').text.strip().split(', ')
-    posting_date = datetime.datetime.strptime(date[0],"%Y-%m-%d")
-    posting_time = date[1]
+    try:
+        date = soup.find('date').text.strip().split(', ')
+        posting_date = datetime.datetime.strptime(date[0],"%Y-%m-%d")
+        posting_time = date[1]
 
-    posting_text = soup.find(attrs={'id':'postingbody'}).text.strip()
-    posting_title = soup.find(attrs={'class':'postingtitle'}).text.strip()
-    posting_email = soup.find(attrs={'href':re.compile(r'mailto.*')})
-    if posting_email is not None:
-        posting_email = posting_email.text.strip()
-    else:
-        posting_email = "nobody"
+        posting_text = soup.find(attrs={'id':'postingbody'}).text.strip()
+        posting_title = soup.find(attrs={'class':'postingtitle'}).text.strip()
+        posting_email = soup.find(attrs={'href':re.compile(r'mailto.*')})
+        if posting_email is not None:
+            posting_email = posting_email.text.strip()
+        else:
+            posting_email = "nobody"
+    except Exception:
+        posting_text = "(fail)"
+        posting_title = "(fail)"
+        posting_email = "(fail)"
+        posting_date = "(fail)"
+        posting_time = "(fail)"
 
     return {'email':posting_email, 'date':posting_date, 'time':posting_time, 
             'text':posting_text, 'title':posting_title, 'url':url}
@@ -106,7 +113,10 @@ def fetch_links_postings(place,subcat='cpg',db=None):
                           (link,))
         # If this isn't a verbatim dupe, store it
         if len(query.fetchall())==0:
-            print(" - "+title+"   "+link)
+            try:
+                print(" - "+title+"   "+link)
+            except UnicodeEncodeError:
+                print(" - "+"(unicode error in title)"+link)
             posting = get_posting(link)
             posting_tuple= [posting[key] for key in
                             ['title','date','time','url','email','text']]
