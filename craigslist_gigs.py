@@ -97,11 +97,16 @@ def fetch_links_postings(place,subcat='cpg',db=None):
 
     links = get_links(place,subcat)
     for (link,title) in links:
-        posting = get_posting(link)
-        posting_tuple= [posting[key] for key in
-                        ['title','date','time','url','email','text']]
-        c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
-                  posting_tuple)
-        time.sleep(3)  # sleep 3 seconds to give the web server a break
+        # Check for duplicates
+        query = c.execute("SELECT title,date,url FROM entries WHERE url=?",
+                          (link,))
+        # If this isn't a verbatim dupe, store it
+        if len(query.fetchall())==0:
+            posting = get_posting(link)
+            posting_tuple= [posting[key] for key in
+                            ['title','date','time','url','email','text']]
+            c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
+                      posting_tuple)
+            time.sleep(1)  # sleep to give the web server a break
     db.commit()
 
