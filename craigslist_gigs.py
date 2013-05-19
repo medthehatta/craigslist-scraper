@@ -123,7 +123,9 @@ def fetch_links_postings(place,subcat='cpg',db=None):
             c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
                       posting_tuple)
             time.sleep(1)  # sleep to give the web server a break
-    db.commit()
+            db.commit()
+            return link
+
 
 
 if __name__=="__main__":
@@ -132,20 +134,14 @@ if __name__=="__main__":
         fetch_links_postings(sys.argv[1])
     else:
         print("Fetching from all sources.")
-        try:
-            places = pickle.load(open("places_remaining.pkl",'rb'))
-        except FileNotFoundError:
-            places = get_places() 
+        places = get_places() 
 
         print("{} sources remain.".format(len(places)))
-        place_file = open("places_remaining.pkl",'wb')
 
         for place in places:
-            fetch_links_postings(place)
-            places.remove(place)
-            pickle.dump(places,place_file)
-            # Sleep to make web server hate us a little less
-            print("Give server a break...")
-            time.sleep(5)
+            if fetch_links_postings(place):
+                # Sleep to make web server hate us a little less
+                print("Give server a break...")
+                time.sleep(5)
 
 
