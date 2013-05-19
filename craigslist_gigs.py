@@ -4,6 +4,8 @@ import random
 import datetime
 import sqlite3
 import time
+import sys
+import pickle
 from bs4 import BeautifulSoup
 
 
@@ -95,13 +97,16 @@ def fetch_links_postings(place,subcat='cpg',db=None):
        db = sqlite3.connect(DB) 
     c = db.cursor()
 
+    print("Fetching links for: {}".format(place))
     links = get_links(place,subcat)
+    print("{} links found.".format(len(links)))
     for (link,title) in links:
         # Check for duplicates
         query = c.execute("SELECT title,date,url FROM entries WHERE url=?",
                           (link,))
         # If this isn't a verbatim dupe, store it
         if len(query.fetchall())==0:
+            print(title)
             posting = get_posting(link)
             posting_tuple= [posting[key] for key in
                             ['title','date','time','url','email','text']]
@@ -109,4 +114,25 @@ def fetch_links_postings(place,subcat='cpg',db=None):
                       posting_tuple)
             time.sleep(1)  # sleep to give the web server a break
     db.commit()
+
+
+if __name__=="__main__":
+    if len(sys.argv)>1:
+        args = " ".join(sys.argv[1:])
+        fetch_links_postings(sys.argv[1])
+    else:
+        print("Fetching from all sources.")
+        try:
+            places = pickle.load(open("places_remaining.pkl",'rb'))
+        except FileNotFoundError:
+            places = get_places() 
+
+        print("{} sources remain.".format(len(places)))
+        place_file = open("places_remaining.pkl",'wb')
+
+        for place in places:
+            fetch_links_postings(place)
+            places.pop(place)
+            pickle.dump(places,place_file)
+
 
