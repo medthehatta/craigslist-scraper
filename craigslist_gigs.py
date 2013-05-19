@@ -1,5 +1,5 @@
 import re
-import urllib
+import urllib.request
 import random
 import datetime
 import sqlite3
@@ -134,5 +134,7 @@ if __name__=="__main__":
             fetch_links_postings(place)
             places.pop(place)
             pickle.dump(places,place_file)
+            # Sleep 30 seconds to make web server hate us a little less
+            time.sleep(30)
 
 
