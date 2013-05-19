@@ -106,7 +106,7 @@ def fetch_links_postings(place,subcat='cpg',db=None):
                           (link,))
         # If this isn't a verbatim dupe, store it
         if len(query.fetchall())==0:
-            print(" - "+title+"   "+url)
+            print(" - "+title+"   "+link)
             posting = get_posting(link)
             posting_tuple= [posting[key] for key in
                             ['title','date','time','url','email','text']]
@@ -134,8 +134,8 @@ if __name__=="__main__":
             fetch_links_postings(place)
             places.remove(place)
             pickle.dump(places,place_file)
-            # Sleep 30 seconds to make web server hate us a little less
+            # Sleep to make web server hate us a little less
             print("Give server a break...")
-            time.sleep(30)
+            time.sleep(10)
 
 
