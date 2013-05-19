@@ -146,6 +146,6 @@ if __name__=="__main__":
             pickle.dump(places,place_file)
             # Sleep to make web server hate us a little less
             print("Give server a break...")
-            time.sleep(10)
+            time.sleep(5)
 
 
