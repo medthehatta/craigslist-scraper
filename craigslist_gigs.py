@@ -24,9 +24,12 @@ def get_soup(url):
     Reads an url with urllib, does some rudimentary error-checking, and returns
     soup
     """
-    ret = urllib.request.urlopen(url)
-    if ret.status == 200:
-        return BeautifulSoup(ret.read())
+    try:
+        ret = urllib.request.urlopen(url)
+        if ret.status == 200:
+            return BeautifulSoup(ret.read())
+    except Exception:
+        return None
     
 
 def get_links(place,subcat='cpg'):
@@ -106,25 +109,26 @@ def fetch_links_postings(place,subcat='cpg',db=None):
 
     print("Fetching links for: {}".format(place))
     links = get_links(place,subcat)
-    print("{} links found.".format(len(links)))
-    for (link,title) in links:
-        # Check for duplicates
-        query = c.execute("SELECT title,date,url FROM entries WHERE url=?",
-                          (link,))
-        # If this isn't a verbatim dupe, store it
-        if len(query.fetchall())==0:
-            try:
-                print(" - "+title+"   "+link)
-            except UnicodeEncodeError:
-                print(" - "+"(unicode error in title)"+link)
-            posting = get_posting(link)
-            posting_tuple= [posting[key] for key in
-                            ['title','date','time','url','email','text']]
-            c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
-                      posting_tuple)
-            time.sleep(1)  # sleep to give the web server a break
-            db.commit()
-            return link
+    if links is not None:
+        print("{} links found.".format(len(links)))
+        for (link,title) in links:
+            # Check for duplicates
+            query = c.execute("SELECT title,date,url FROM entries WHERE url=?",
+                              (link,))
+            # If this isn't a verbatim dupe, store it
+            if len(query.fetchall())==0:
+                try:
+                    print(" - "+title+"   "+link)
+                except UnicodeEncodeError:
+                    print(" - "+"(unicode error in title)"+link)
+                posting = get_posting(link)
+                posting_tuple= [posting[key] for key in
+                                ['title','date','time','url','email','text']]
+                c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
+                          posting_tuple)
+                time.sleep(1)  # sleep to give the web server a break
+                db.commit()
+                return link
 
 
 
@@ -138,8 +142,8 @@ if __name__=="__main__":
 
         print("{} sources remain.".format(len(places)))
 
-        for place in places:
-            if fetch_links_postings(place):
+        for (i,place) in zip(range(len(places)),places):
+            if fetch_links_postings(place) or i%10==0:
                 # Sleep to make web server hate us a little less
                 print("Give server a break...")
                 time.sleep(5)
