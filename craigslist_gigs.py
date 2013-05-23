@@ -123,7 +123,7 @@ def fetch_links_postings(place,subcat='cpg',db=None):
                     print(" - "+"(unicode error in title)"+link)
                 posting = get_posting(link)
                 posting_tuple= [posting[key] for key in
-                                ['title','date','time','url','email','text']]
+                                ['title','date','time','url','email','text'] if posting]
                 c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
                           posting_tuple)
                 time.sleep(1)  # sleep to give the web server a break
