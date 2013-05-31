@@ -10,7 +10,13 @@ if __name__=='__main__':
                       "AND text LIKE '%{}%'"
                       "ORDER BY date(date)")
     c = db.cursor()
-    for keyword in sys.argv[1:]:
+    
+    if len(sys.argv)>1:
+        keywords = sys.argv[1:]
+    else:
+        keywords = [""]
+
+    for keyword in keywords:
         print()
         print(">>> {}".format(keyword))
         df = c.execute(query_template.format(keyword))
