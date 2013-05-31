@@ -5,7 +5,8 @@ import datetime
 import sqlite3
 import time
 import sys
-import pickle
+import argparse
+from itertools import count
 from bs4 import BeautifulSoup
 
 
@@ -32,17 +33,14 @@ def get_soup(url):
         return None
     
 
-def get_links(place,subcat='cpg'):
+def get_links(place,subcat):
     """
     Reads all the links on the first page of a craigslist location.
-
-    Reads computer gigs (cpg) by default, but can accept a second parameter to
-    check other listings.
     """
     url = "http://{}.craigslist.org".format(place)
     soup = get_soup(url+'/{}/'.format(subcat))
     if soup is not None:
-        href_match = re.compile(r'^(?:/[a-z]+)*/cpg/[0-9]+.html')
+        href_match = re.compile(r'^(?:/[a-z]+)*/'+subcat+'/[0-9]+.html')
         text_match = lambda t: t is not None
         links = soup.find_all(attrs={'href':href_match},text=text_match)
         ret_links = [(url+link.attrs['href'],link.text) for link in links]
@@ -97,7 +95,7 @@ def print_posting(post):
     return template.format(**post)
 
 
-def fetch_links_postings(place,subcat='cpg',db=None):
+def fetch_links_postings(place,subcat,db=None):
     """
     Given a place, fetches all the postings from the place page and gets their
     info.
@@ -128,22 +126,44 @@ def fetch_links_postings(place,subcat='cpg',db=None):
                           posting_tuple)
                 time.sleep(1)  # sleep to give the web server a break
                 db.commit()
-                return link
+        return True
+
 
 
 
 if __name__=="__main__":
-    if len(sys.argv)>1:
-        args = " ".join(sys.argv[1:])
-        fetch_links_postings(sys.argv[1])
-    else:
-        print("Fetching from all sources.")
+    parser_description = "Scrapes postings from craigslist."
+    parser = argparse.ArgumentParser(description=parser_description)
+
+    parser.add_argument('-c','--category',action='append',
+                        help='Categories to fetch data from.  E.g., computer '\
+                             'gigs: cpg')
+
+    parser.add_argument('-l','--location',action='append',
+                        help='Locations to fetch data from.')
+
+    parsed =  parser.parse_args()
+
+
+    # By default, fetch from all locations
+    if parsed.location is None:
         places = get_places() 
+    else:
+        places = parsed.location
+    print("Fetching from {} locations.".format(len(places)))
 
-        print("{} sources remain.".format(len(places)))
+    # By default, fetch computer gigs
+    if parsed.category is None:
+        categories = ['cpg']
+    else:
+        categories = parsed.category
+    print("Fetching from {} categories: {}".format(len(categories),
+                                                   ", ".join(categories)))
 
-        for (i,place) in zip(range(len(places)),places):
-            if fetch_links_postings(place) or i%10==0:
+    # Loop through all the categories and locations
+    for cat in categories:
+        for (i,place) in zip(count(),places):
+            if fetch_links_postings(place,cat) or i%10==0:
                 # Sleep to make web server hate us a little less
                 print("Give server a break...")
                 time.sleep(5)
