@@ -8,10 +8,17 @@ Works
 -----
 - Scrapes first page of jobs given a craigslist region (sfbay, philadelphia, slo, etc.)
 - Scrapes the useful information from a particular job
+- Stores the scrapted data to a sqlite db
+- Can query for words in the texts of the scraped ads
+
+In Progress
+-----------
+- Classify posting with relevant keywords (tf-idf algorithm)
+- Track replied-to postings
 
 Not Yet Implemented
 -------------------
-- Store the scraped data
-- Filter the scraped data for certain criteria (date, locals only, etc.)
-- Optimize so that only unread jobs are scraped
+- Filter scrapes or db query by relevant keywords (not any words in text)
+- Clean workflow for fetching, searching, and marking as replied-to
+
 
