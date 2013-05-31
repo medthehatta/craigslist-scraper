@@ -1,8 +1,6 @@
 Craigslist Scraper
 ==================
-Scrapes Craigslist for computer gigs (cpg).
-
-Can be adjusted to scrape for other ads by passing a second parameter to the appropriate functions.
+Scrapes Craigslist for ads.
 
 Works
 -----
