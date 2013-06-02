@@ -14,7 +14,8 @@ def get_places():
     """Loads the craigslist locations like sfbay, philadelphia, etc."""
     FP = "cl_locations.dat"
     try:
-        return open(FP).read().split("\n")
+        lines = open(FP).read().split("\n")
+        return [l for l in lines if l]
     except IOError:
         print("Unable to open location file at: {}".format(FP))
         return None
