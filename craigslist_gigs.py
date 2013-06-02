@@ -100,9 +100,9 @@ def fetch_links_postings(place,subcat,db=None):
     Given a place, fetches all the postings from the place page and gets their
     info.
     """
-    DB = "entries.db"
     if db is None:
-       db = sqlite3.connect(DB) 
+        DB = "entries.db"
+        db = sqlite3.connect(DB) 
     c = db.cursor()
 
     print("Fetching links for: {}".format(place))
@@ -142,6 +142,9 @@ if __name__=="__main__":
     parser.add_argument('-l','--location',action='append',
                         help='Locations to fetch data from.')
 
+    parser.add_argument('-d','--database',
+                        help='Database file to store data to.')
+
     parsed =  parser.parse_args()
 
 
@@ -160,10 +163,18 @@ if __name__=="__main__":
     print("Fetching from {} categories: {}".format(len(categories),
                                                    ", ".join(categories)))
 
+    # Use entries.db as the default db
+    if parsed.database is None:
+        dbfile = 'entries.db'
+    else:
+        dbfile = parsed.database
+    print("(Saving to {})".format(dbfile))
+    db = sqlite3.connect(dbfile)
+
     # Loop through all the categories and locations
     for cat in categories:
         for (i,place) in zip(count(),places):
-            if fetch_links_postings(place,cat) or i%10==0:
+            if fetch_links_postings(place,cat,db) or i%10==0:
                 # Sleep to make web server hate us a little less
                 print("Give server a break...")
                 time.sleep(5)
