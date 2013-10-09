@@ -1,5 +1,4 @@
 import sqlite3
-from pandas.io.sql import read_frame
 import sys
 
 if __name__=='__main__':
