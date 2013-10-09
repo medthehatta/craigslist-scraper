@@ -106,10 +106,9 @@ def fetch_links_postings(place,subcat,db=None):
         db = sqlite3.connect(DB) 
     c = db.cursor()
 
-    print("Fetching links for: {}".format(place))
     links = get_links(place,subcat)
+    hits = 0
     if links is not None:
-        print("{} links found.".format(len(links)))
         for (link,title) in links:
             # Check for duplicates
             query = c.execute("SELECT title,date,url FROM entries WHERE url=?",
@@ -125,10 +124,12 @@ def fetch_links_postings(place,subcat,db=None):
                                 ['title','date','time','url','email','text'] if posting]
                 c.execute("INSERT INTO entries VALUES (NULL, ?, ?, ?, ?, ?, ?)",
                           posting_tuple)
-                time.sleep(1)  # sleep to give the web server a break
+                time.sleep(0.5)  # sleep to give the web server a break
+                hits+=1
                 db.commit()
-        return True
-
+        return hits
+    else:
+        return 0
 
 
 
@@ -174,10 +175,13 @@ if __name__=="__main__":
 
     # Loop through all the categories and locations
     for cat in categories:
-        for (i,place) in zip(count(),places):
-            if fetch_links_postings(place,cat,db) or i%10==0:
+        for (i,place) in enumerate(places):
+            print("({}/{}) {}".format(i+1,len(places),place))
+            fetched = fetch_links_postings(place,cat,db)
+            if fetched>0: print(" [Fetched {} new links]".format(fetched))
+            if fetched>5 or i%10==0:
                 # Sleep to make web server hate us a little less
                 print("Give server a break...")
-                time.sleep(5)
+                time.sleep(3)
 
 
