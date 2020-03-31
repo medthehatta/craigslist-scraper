@@ -1,0 +1,133 @@
+#!/bin/bash
+#
+# Craigslist computer gig scraper.
+#
+# Pulls down computer gigs from the given craigslist location.
+# (See locations.txt for available locations.)
+#
+#
+# Requires:
+#
+#  - curl
+#  - jq (optional, for producing JSON documents)
+#  - pandoc (optional, for prettifying the post body)
+#
+#
+# Usage:
+#
+#  $ craigslist-computer-gigs REGION
+#
+#
+# Example:
+#
+#  $ craigslist-computer-gigs sfbay
+#
+
+
+prefix="$(dirname -- "$(readlink -f -- "$0")")"
+
+
+_usage () {
+    cat <<EOF
+Usage: $(basename $0) [--gig GIGTYPE] [--outdir OUTDIR] (--region REGION| REGION)
+EOF
+}
+
+
+_get_gig_type () {
+    local gig="$1"
+    gigfile="$prefix/gig-types.txt"
+    num_types="$(grep "$gig" "$gigfile" 2>/dev/null | wc -l)"
+    if [ "$num_types" -gt 1 ]; then
+        echo "Requested gig type '$gig' matches multiple types:" >&2
+        paste <(echo) <(grep "$gig" "$gigfile")
+        exit 2
+    fi
+    grep "$gig" "$gigfile"
+}
+
+
+tmp="$(mktemp -d)"
+trap "rm -rf '$tmp'" EXIT
+
+
+outdir="$(pwd)/$(basename $0)-output"
+gig_type="/d/computer-gigs/search/cpg"
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            _usage
+            exit 0
+            ;;
+        --outdir) 
+            outdir="$2"
+            shift 2
+            ;;
+        -g|--gig)
+            gig_type="$(_get_gig_type "$2")"
+            shift 2
+            ;;
+        -r|--region)
+            region="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+mkdir -p "$outdir"
+
+
+[ -n "$region" ] || region="$1"
+[ -n "$region" ] || { _usage; exit 1; }
+
+
+mkdir -p "$outdir/$region"
+
+
+url="https://$region.craigslist.org/${gig_type#/}"
+echo "$url" >&2
+curl -s "$url" > "$tmp/g.$region"
+grep -oP '(?<=href=")https://.*\d+.html(?=")' "$tmp/g.$region" | sort | uniq > "$tmp/gigs"
+
+
+while read -r url; do
+    id_="$(grep -oP '(?<=/)\d+(?=.html)' <<< "$url")"
+    outfile="$outdir/$region/$id_"
+
+    echo "$url" >&2
+    curl -s "$url" > "$tmp/g.$id_"
+
+    posted="$(grep -P 'posted:' "$tmp/g.$id_" | grep -oP '(?<=datetime=").*?(?=")')"
+    updated="$(grep -P 'updated:' "$tmp/g.$id_" | grep -oP '(?<=datetime=").*?(?=")')"
+    title="$(grep -oP "(?<=<title>).*?(?=</title>)" "$tmp/g.$id_")"
+    if (which pandoc &>/dev/null); then
+        body="$(sed -n '/<section id="postingbody">/,/<\/section>/p' "$tmp/g.$id_" | pandoc -f html -t plain | grep -v 'QR Code Link to This Post')"
+    else
+        body="$(sed -n '/<section id="postingbody">/,/<\/section>/p' "$tmp/g.$id_")"
+    fi
+
+    (which jq &>/dev/null) && jq -n \
+        --arg posted "$posted" \
+        --arg updated "$updated" \
+        --arg title "$title" \
+        --arg body "$body" \
+        '{posted: $posted, updated: $updated, title: $title, body: $body}' \
+        > "$outfile.json"
+
+    cat <<EOF > "$outfile.txt"
+==============================
+Listing: $id_
+URL: $url
+
+Posted: $posted
+Updated: $updated
+
+$title
+$body
+
+
+
+EOF
+done < "$tmp/gigs"
