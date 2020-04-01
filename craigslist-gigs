@@ -47,6 +47,52 @@ _get_gig_type () {
 }
 
 
+_process_url () {
+    local url="$1"
+    local tmp="$2"
+    local region_dir="$3"
+    id_="$(grep -oP '(?<=/)\d+(?=.html)' <<< "$url")"
+    outfile="$region_dir/$id_"
+
+    echo "$url" >&2
+    curl -s "$url" > "$tmp/g.$id_"
+
+    posted="$(grep -P 'posted:' "$tmp/g.$id_" | grep -oP '(?<=datetime=").*?(?=")')"
+    updated="$(grep -P 'updated:' "$tmp/g.$id_" | grep -oP '(?<=datetime=").*?(?=")')"
+    title="$(grep -oP "(?<=<title>).*?(?=</title>)" "$tmp/g.$id_")"
+    if (which pandoc &>/dev/null); then
+        body_prettify=(pandoc -f html -t plain)
+    else
+        body_prettify=(cat)
+    fi
+    body="$(sed -n '/<section id="postingbody">/,/<\/section>/p' "$tmp/g.$id_" | "${body_prettify[@]}" | grep -v 'QR Code Link to This Post')"
+
+    (which jq &>/dev/null) && jq -n \
+        --arg posted "$posted" \
+        --arg updated "$updated" \
+        --arg title "$title" \
+        --arg body "$body" \
+        '{posted: $posted, updated: $updated, title: $title, body: $body}' \
+        > "$outfile.json"
+
+    cat <<EOF > "$outfile.txt"
+==============================
+Listing: $id_
+URL: $url
+
+Posted: $posted
+Updated: $updated
+
+$title
+$body
+
+
+
+EOF
+}
+export -f _process_url
+
+
 tmp="$(mktemp -d)"
 trap "rm -rf '$tmp'" EXIT
 
@@ -92,42 +138,4 @@ curl -s "$url" > "$tmp/g.$region"
 grep -oP '(?<=href=")https://.*\d+.html(?=")' "$tmp/g.$region" | sort | uniq > "$tmp/gigs"
 
 
-while read -r url; do
-    id_="$(grep -oP '(?<=/)\d+(?=.html)' <<< "$url")"
-    outfile="$outdir/$region/$id_"
-
-    echo "$url" >&2
-    curl -s "$url" > "$tmp/g.$id_"
-
-    posted="$(grep -P 'posted:' "$tmp/g.$id_" | grep -oP '(?<=datetime=").*?(?=")')"
-    updated="$(grep -P 'updated:' "$tmp/g.$id_" | grep -oP '(?<=datetime=").*?(?=")')"
-    title="$(grep -oP "(?<=<title>).*?(?=</title>)" "$tmp/g.$id_")"
-    if (which pandoc &>/dev/null); then
-        body="$(sed -n '/<section id="postingbody">/,/<\/section>/p' "$tmp/g.$id_" | pandoc -f html -t plain | grep -v 'QR Code Link to This Post')"
-    else
-        body="$(sed -n '/<section id="postingbody">/,/<\/section>/p' "$tmp/g.$id_")"
-    fi
-
-    (which jq &>/dev/null) && jq -n \
-        --arg posted "$posted" \
-        --arg updated "$updated" \
-        --arg title "$title" \
-        --arg body "$body" \
-        '{posted: $posted, updated: $updated, title: $title, body: $body}' \
-        > "$outfile.json"
-
-    cat <<EOF > "$outfile.txt"
-==============================
-Listing: $id_
-URL: $url
-
-Posted: $posted
-Updated: $updated
-
-$title
-$body
-
-
-
-EOF
-done < "$tmp/gigs"
+xargs -I{} -n1 -P3 -a "$tmp/gigs" bash -c "_process_url '{}' '$tmp' '$outdir/$region'"
